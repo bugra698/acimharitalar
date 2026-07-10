@@ -10,8 +10,8 @@ export const Route = createFileRoute("/")({
         content:
           "Sinematik uydu haritası, mesafe ve alan ölçüm araçları, anlık görüntü işleme ve kurgusal harita yükleme motoru. Tamamen Türkçe.",
       },
-      { property: "og:title", content: "Acım Haritalar" },
-      { property: "og:description", content: "Taktik uydu haritası ve ölçüm araçları." },
+      { property: "og:title", content: "Acım Haritalar · Taktik Uydu Görüntüleme" },
+      { property: "og:description", content: "Sinematik uydu haritası, mesafe ve alan ölçüm araçları, anlık görüntü işleme ve kurgusal harita yükleme motoru. Tamamen Türkçe." },
     ],
   }),
   component: Index,
