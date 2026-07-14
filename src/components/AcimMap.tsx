@@ -35,7 +35,6 @@ const TYPE_COLORS: Record<MarkerType, string> = {
   "Favori Mekan": "#facc15",
 };
 
-// Helper function to escape HTML inside popups
 const escapeHtml = (text: string) => {
   return text
     .replace(/&/g, "&amp;")
@@ -45,19 +44,16 @@ const escapeHtml = (text: string) => {
     .replace(/'/g, "&#039;");
 };
 
-// Simple distance formatting helper
 const formatDistance = (m: number) => {
   if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
   return `${Math.round(m)} m`;
 };
 
-// Simple area formatting helper
 const formatArea = (sqm: number) => {
   if (sqm >= 1000000) return `${(sqm / 1000000).toFixed(2)} km²`;
   return `${Math.round(sqm)} m²`;
 };
 
-// Shoelace formula to compute polygon area
 const computeArea = (pts: L.LatLng[]) => {
   let area = 0;
   const numPoints = pts.length;
@@ -99,8 +95,6 @@ export default function AcimMap() {
   const [draftType, setDraftType] = useState<MarkerType>("Favori Mekan");
   const [awaitingMarker, setAwaitingMarker] = useState(false);
   const [locating, setLocating] = useState(false);
-
-  // Mouse Live Coordinates HUD Tracker
   const [mouseCoords, setMouseCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const toolRef = useRef(tool);
@@ -108,18 +102,17 @@ export default function AcimMap() {
   useEffect(() => { toolRef.current = tool; }, [tool]);
   useEffect(() => { awaitingMarkerRef.current = awaitingMarker; }, [awaitingMarker]);
 
-  // Load saved markers
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) setSavedMarkers(JSON.parse(raw));
     } catch {}
   }, []);
+
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(savedMarkers)); } catch {}
   }, [savedMarkers]);
 
-  // Initialize map
   useEffect(() => {
     if (!mapRef.current || map.current) return;
 
@@ -131,8 +124,6 @@ export default function AcimMap() {
       doubleClickZoom: false,
     });
 
-    // 1. "MAP DATA NOT AVAILABLE" PROBLEM RESOLVED:
-    // Added maxZoom: 20 and maxNativeZoom: 18 so Leaflet stretches the last available image overlay instead of loading missing tile gray squares
     satLayer.current = L.tileLayer(
       "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       { 
@@ -142,8 +133,6 @@ export default function AcimMap() {
       },
     ).addTo(m);
 
-    // 2. KASMAYI ÖNLEYEN AKILLI ŞEHİR İSİMLERİ (Dinamik Zoom Seviyesi Katmanları):
-    // Different layers are loaded according to current zoom to save performance and avoid cluttering.
     labelsLayer.current = L.tileLayer(
       "https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png",
       {
@@ -165,18 +154,14 @@ export default function AcimMap() {
     m.on("click", handleMapClick);
     m.on("dblclick", handleMapDblClick);
     
-    // Live coordinate tracker for mousemove
     m.on("mousemove", (e: L.LeafletMouseEvent) => {
       setMouseCoords({ lat: e.latlng.lat, lng: e.latlng.lng });
     });
 
-    // Handle dynamic map zoom end to filter labels layer rendering
     m.on("zoomend", () => {
       const currentZoom = m.getZoom();
       if (!labelsLayer.current) return;
       
-      // If the label setting is globally ON, decide visibility based on current zoom level
-      // Very far (zoom < 4) will suppress heavily crowded features.
       if (labelsOn) {
         if (currentZoom < 4) {
           m.removeLayer(labelsLayer.current);
@@ -195,19 +180,16 @@ export default function AcimMap() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [labelsOn]);
 
-  // CSS filter update
   useEffect(() => {
     const filter = `contrast(${contrast}) brightness(${brightness}) saturate(${saturate})`;
     document.documentElement.style.setProperty("--acim-tile-filter", filter);
   }, [contrast, brightness, saturate]);
 
-  // Toggle labels
   useEffect(() => {
     if (!map.current || !labelsLayer.current) return;
     const currentZoom = map.current.getZoom();
     
     if (labelsOn) {
-      // Respect the smart zoom constraint (only show if zoom is decent)
       if (currentZoom >= 4 && !map.current.hasLayer(labelsLayer.current)) {
         labelsLayer.current.addTo(map.current);
       }
@@ -218,7 +200,6 @@ export default function AcimMap() {
     }
   }, [labelsOn]);
 
-  // Redraw saved markers
   useEffect(() => {
     if (!markersLayer.current || !map.current) return;
     markersLayer.current.clearLayers();
@@ -292,7 +273,6 @@ export default function AcimMap() {
 
   const flyToMarker = (m: SavedMarker) => {
     map.current?.flyTo([m.lat, m.lng], 14, { duration: 1.4 });
-    // If mobile, collapse sidebar on click to show destination clearly
     if (window.innerWidth < 768) {
       setPanelOpen(false);
     }
@@ -435,7 +415,6 @@ export default function AcimMap() {
         if (hit.osm_id && hit.osm_type) {
           drawBoundary(Number(hit.osm_id), String(hit.osm_type));
         }
-        // Collapse mobile keyboard and panel to show searching target clearly
         if (window.innerWidth < 768) {
           setPanelOpen(false);
         }
@@ -559,7 +538,24 @@ export default function AcimMap() {
           pointer-events: none;
           mix-blend-mode: screen;
         }
-        /* Custom scrollbar for control panel */
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.2); border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(34,211,238,0.4); }
+      `}</style>
+
+      <div ref={mapRef} className="absolute inset-0 z-0" />
+      <div className="pointer-events-none absolute inset-0 z-10 acim-scan" />
+
+      <div className="absolute left-0 right-0 top-0 z-20 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2 p-3 bg-gradient-to-b from-slate-950/80 to-transparent">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-cyan-400/20 bg-slate-950/80 px-3 py-2 backdrop-blur-xl">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-cyan-400 shadow-[0_0_10px_#22d3ee]" />
+            <div>
+              <div className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70 leading-none">Acım</div>
+              <div className="text-xs font-semibold tracking-wider">HARİTALAR</div>
+            </div>
+          </div>
+          <button
+            onClick={() => setPanelOpen((v) => !v)}
+            className="md:hidden text-cyan-400 hover:text-cyan-300 transition px-2 py-1 text-base
