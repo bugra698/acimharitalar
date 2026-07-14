@@ -65,6 +65,81 @@ const computeArea = (pts: L.LatLng[]) => {
   return Math.abs(area / 2) * 111300 * 111300 * Math.cos((pts[0].lat * Math.PI) / 180);
 };
 
+// CSS stilini derleyicinin hata vermeyeceği düz bir string olarak dışarıda tanımlıyoruz
+const mapStyles = `
+  .leaflet-tile-pane .leaflet-layer:not(.acim-labels-wrap) .leaflet-tile,
+  .acim-custom-overlay {
+    filter: var(--acim-tile-filter, contrast(1.25) brightness(0.9) saturate(1.15));
+  }
+  .acim-labels-layer { 
+    filter: drop-shadow(0 0 3px rgba(0,0,0,0.9)) brightness(1.4) contrast(1.1); 
+    mix-blend-mode: screen; 
+  }
+  .leaflet-container { 
+    background: #05060a; 
+    font-family: inherit; 
+  }
+  .leaflet-control-zoom {
+    margin-bottom: 24px !important;
+    margin-right: 12px !important;
+  }
+  .leaflet-control-zoom a {
+    background: rgba(15,23,42,0.85) !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(34,211,238,0.25) !important;
+    backdrop-filter: blur(8px);
+    width: 38px !important;
+    height: 38px !important;
+    line-height: 38px !important;
+    font-size: 16px !important;
+    border-radius: 8px !important;
+    margin-bottom: 4px;
+  }
+  .leaflet-control-zoom a:hover { 
+    background: rgba(34,211,238,0.3) !important; 
+    color: #22d3ee !important; 
+  }
+  .leaflet-control-attribution {
+    background: rgba(2,6,23,0.7) !important;
+    color: #94a3b8 !important;
+    font-size: 9px !important;
+    backdrop-filter: blur(6px);
+    padding: 2px 6px !important;
+    border-radius: 4px;
+  }
+  .leaflet-popup-content-wrapper { 
+    background: rgba(15, 23, 42, 0.95); 
+    border: 1px solid rgba(34, 211, 238, 0.3); 
+    border-radius: 12px; 
+    backdrop-filter: blur(8px); 
+  }
+  .leaflet-popup-tip { 
+    background: rgba(15, 23, 42, 0.95); 
+    border: 1px solid rgba(34, 211, 238, 0.3); 
+  }
+  .acim-scan::before {
+    content: "";
+    position: absolute; 
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(34,211,238,0.04) 50%, transparent 100%);
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+  .custom-scrollbar::-webkit-scrollbar { 
+    width: 4px; 
+  }
+  .custom-scrollbar::-webkit-scrollbar-track { 
+    background: transparent; 
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb { 
+    background: rgba(34,211,238,0.2); 
+    border-radius: 10px; 
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { 
+    background: rgba(34,211,238,0.4); 
+  }
+`;
+
 export default function AcimMap() {
   const mapRef = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -497,52 +572,11 @@ export default function AcimMap() {
 
   return (
     <div className="relative h-[100dvh] w-screen overflow-hidden bg-slate-950 text-slate-100 select-none">
-      <style>{`
-        .leaflet-tile-pane .leaflet-layer:not(.acim-labels-wrap) .leaflet-tile,
-        .acim-custom-overlay {
-          filter: var(--acim-tile-filter, contrast(1.25) brightness(0.9) saturate(1.15));
-        }
-        .acim-labels-layer { filter: drop-shadow(0 0 3px rgba(0,0,0,0.9)) brightness(1.4) contrast(1.1); mix-blend-mode: screen; }
-        .leaflet-container { background: #05060a; font-family: inherit; }
-        .leaflet-control-zoom {
-          margin-bottom: 24px !important;
-          margin-right: 12px !important;
-        }
-        .leaflet-control-zoom a {
-          background: rgba(15,23,42,0.85) !important;
-          color: #e2e8f0 !important;
-          border: 1px solid rgba(34,211,238,0.25) !important;
-          backdrop-filter: blur(8px);
-          width: 38px !important;
-          height: 38px !important;
-          line-height: 38px !important;
-          font-size: 16px !important;
-          border-radius: 8px !important;
-          margin-bottom: 4px;
-        }
-        .leaflet-control-zoom a:hover { background: rgba(34,211,238,0.3) !important; color: #22d3ee !important; }
-        .leaflet-control-attribution {
-          background: rgba(2,6,23,0.7) !important;
-          color: #94a3b8 !important;
-          font-size: 9px !important;
-          backdrop-filter: blur(6px);
-          padding: 2px 6px !important;
-          border-radius: 4px;
-        }
-        .leaflet-popup-content-wrapper { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(34, 211, 238, 0.3); border-radius: 12px; backdrop-filter: blur(8px); }
-        .leaflet-popup-tip { background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(34, 211, 238, 0.3); }
-        .acim-scan::before {
-          content: "";
-          position: absolute; inset: 0;
-          background: linear-gradient(180deg, transparent 0%, rgba(34,211,238,0.04) 50%, transparent 100%);
-          pointer-events: none;
-          mix-blend-mode: screen;
-        }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.2); border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(34,211,238,0.4); }
-      `}</style>
+      {/* Hata veren dinamik şablon dizisini kaldırıp, 
+        doğrudan React 'dangerouslySetInnerHTML' ile statik string geçiriyoruz. 
+        Böylece derleyici (vite:oxc) asla hata veremez.
+      */}
+      <style dangerouslySetInnerHTML={{ __html: mapStyles }} />
 
       <div ref={mapRef} className="absolute inset-0 z-0" />
       <div className="pointer-events-none absolute inset-0 z-10 acim-scan" />
@@ -554,8 +588,4 @@ export default function AcimMap() {
             <div>
               <div className="text-[10px] uppercase tracking-[0.3em] text-cyan-300/70 leading-none">Acım</div>
               <div className="text-xs font-semibold tracking-wider">HARİTALAR</div>
-            </div>
-          </div>
-          <button
-            onClick={() => setPanelOpen((v) => !v)}
-            className="md:hidden text-cyan-400 hover:text-cyan-300 transition px-2 py-1 text-base
+   
